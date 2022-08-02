@@ -20,9 +20,12 @@ def test_additional_properties():
 def additional_properties(data, skip=False):
     "This recreates the behaviour of kubectl at https://github.com/kubernetes/kubernetes/blob/225b9119d6a8f03fcbe3cc3d590c261965d928d0/pkg/kubectl/validation/schema.go#L312"
     if isinstance(data, dict):
-        if "properties" in data and not skip:
-            if "additionalProperties" not in data:
-                data["additionalProperties"] = False
+        if (
+            "properties" in data
+            and not skip
+            and "additionalProperties" not in data
+        ):
+            data["additionalProperties"] = False
         for _, v in data.items():
             additional_properties(v)
     return data
@@ -48,9 +51,7 @@ def replace_int_or_string(data):
                 else:
                     new_v = replace_int_or_string(v)
             elif isinstance(v, list):
-                new_v = list()
-                for x in v:
-                    new_v.append(replace_int_or_string(x))
+                new_v = [replace_int_or_string(x) for x in v]
             else:
                 new_v = v
             new[k] = new_v
@@ -66,9 +67,7 @@ def allow_null_optional_fields(data, parent=None, grand_parent=None, key=None):
             if isinstance(v, dict):
                 new_v = allow_null_optional_fields(v, data, parent, k)
             elif isinstance(v, list):
-                new_v = list()
-                for x in v:
-                    new_v.append(allow_null_optional_fields(x, v, parent, k))
+                new_v = [allow_null_optional_fields(x, v, parent, k) for x in v]
             elif isinstance(v, str):
                 is_non_null_type = k == "type" and v != "null"
                 has_required_fields = grand_parent and "required" in grand_parent
@@ -100,9 +99,8 @@ def write_schema_file(schema, filename):
 
     # Dealing with user input here..
     filename = os.path.basename(filename)
-    f = open(filename, "w")
-    print(schemaJSON, file=f)
-    f.close()
+    with open(filename, "w") as f:
+        print(schemaJSON, file=f)
     print("JSON schema written to {filename}".format(filename=filename))
 
 
